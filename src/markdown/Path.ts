@@ -10,7 +10,7 @@ export class Path {
 
   constructor(
     private pathTemplate: string,
-    private method: OpenAPIV3_1.HttpMethods,
+    private method: 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head',
     private description: string,
     private document: HTMLHtmlElement
   ) { }
