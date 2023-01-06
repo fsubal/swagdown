@@ -48,7 +48,7 @@ export class Path {
   toJSON(): OpenAPIV3_1.OperationObject {
     return {
       description: this.description,
-      parameters: [],
+      parameters: this.parameters,
       requestBody: this.requestBody,
       responses: this.responses
     }
