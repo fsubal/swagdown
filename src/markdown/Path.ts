@@ -1,34 +1,56 @@
 import { OpenAPIV3_1 } from "openapi-types";
-import { findHeadingById } from "./heading";
+import { findHeadingById, MarkdownHeading } from "./MarkdownHeading";
+import { markdownToHtmlDocument } from "./utils";
+
+type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head'
+
+export interface PathItem {
+  pathTemplate: string
+  method: HttpMethod
+  description: string
+  markdown: string
+}
 
 /**
  * Markdown から OpenAPI の paths[] 部分を取り出す
  */
 export class Path {
-  private requestHeading = findHeadingById('request', this.document)
-  private responsesHeading = findHeadingById('responses', this.document)
+  readonly pathTemplate: string
+  readonly method: HttpMethod
+  readonly description: string
+  private document: HTMLHtmlElement
+  private requestHeading: MarkdownHeading | null
+  private responsesHeading: MarkdownHeading | null
 
-  constructor(
-    private pathTemplate: string,
-    private method: 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head',
-    private description: string,
-    private document: HTMLHtmlElement
-  ) { }
+  constructor({ pathTemplate, method, description, markdown }: PathItem) {
+    this.pathTemplate = pathTemplate
+    this.method = method
+    this.description = description
+    this.document = markdownToHtmlDocument(markdown)
+    this.requestHeading = findHeadingById('request', this.document)
+    this.responsesHeading = findHeadingById('responses', this.document)
+  }
 
-  get responses() {
+  get parameters() {
     return []
   }
 
-  toJSON(): OpenAPIV3_1.PathItemObject {
+  get requestBody() {
     return {
-      [this.pathTemplate]: {
-        [this.method]: {
-          description: this.description,
-          parameters: [],
-          requestBody: [],
-          responses: this.responses
-        }
-      }
+      content: {}
+    }
+  }
+
+  get responses() {
+    return {}
+  }
+
+  toJSON(): OpenAPIV3_1.OperationObject {
+    return {
+      description: this.description,
+      parameters: [],
+      requestBody: this.requestBody,
+      responses: this.responses
     }
   }
 }

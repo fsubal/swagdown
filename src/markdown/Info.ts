@@ -1,5 +1,6 @@
 import semver from "semver"
-import { findHeadingById, MarkdownHeading } from "./heading"
+import { findHeadingById, MarkdownHeading } from "./MarkdownHeading"
+import { markdownToHtmlDocument } from "./utils"
 
 const DEFAULT_VERSION = '1.0.0'
 
@@ -7,9 +8,13 @@ const DEFAULT_VERSION = '1.0.0'
  * Markdown から OpenAPI の info 部分を取り出す
  */
 export class Info {
-  private titleElement = this.document.querySelector('h1')
+  private document: HTMLHtmlElement
+  private titleElement: HTMLHeadingElement | null
 
-  constructor(private document: HTMLHtmlElement) { }
+  constructor(markdown: string) {
+    this.document = markdownToHtmlDocument(markdown)
+    this.titleElement = this.document.querySelector('h1')
+  }
 
   get title() {
     return this.titleElement?.textContent ?? 'Example API Documentation'
@@ -20,9 +25,16 @@ export class Info {
       return ''
     }
 
-    const children = new MarkdownHeading(this.titleElement).children
+    const heading = new MarkdownHeading(this.titleElement)
 
-    return children.map(node => node.textContent).join('')
+    const descriptions: string[] = []
+    for (const node of heading.eachChildInSection()) {
+      if (node.textContent) {
+        descriptions.push(node.textContent)
+      }
+    }
+
+    return descriptions.join('')
   }
 
   get version() {
@@ -31,12 +43,17 @@ export class Info {
       return DEFAULT_VERSION
     }
 
-    const children = new MarkdownHeading(heading).children
+    for (const node of heading.eachChildInSection()) {
+      if (!node.textContent) {
+        continue
+      }
 
-    const versionNode = children.find(node => (
-      semver.valid(node.textContent)
-    ))
+      const trimmed = node.textContent.trim()
+      if (semver.valid(trimmed)) {
+        return trimmed
+      }
+    }
 
-    return versionNode?.textContent ?? DEFAULT_VERSION
+    return DEFAULT_VERSION
   }
 }

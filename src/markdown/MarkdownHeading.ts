@@ -1,13 +1,15 @@
-const HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
-
-const MAX_CHILDREN_COUNT = 100
+const HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const
 
 /**
  * マークダウンにおける見出し要素。
  * HTML 上で親子関係にない段落を自分の子要素と認識したいときとかに使う
  */
 export class MarkdownHeading {
-  constructor(private el: HTMLHeadingElement) { }
+  constructor(private el: HTMLHeadingElement) {
+    if (!HEADING_TAGS.includes(el.tagName as any)) {
+      throw new TypeError('Not h1-h6 element')
+    }
+  }
 
   get level() {
     const [level] = this.el.tagName.match(/\d+/) ?? []
@@ -24,9 +26,7 @@ export class MarkdownHeading {
    * 自分よりレベルの高い、または同じレベルの見出しにぶつかったらそこで停止する
    * （自身が h2 要素の場合、次にくる h1 または h2 にぶつかるまで探索を続ける）
    */
-  get children() {
-    const nodes: ChildNode[] = []
-
+  *eachChildInSection() {
     let current: ChildNode = this.el
     while (current.nextSibling != null) {
       const sibling = current.nextSibling
@@ -37,15 +37,9 @@ export class MarkdownHeading {
         }
       }
 
-      if (nodes.length >= MAX_CHILDREN_COUNT) {
-        throw new Error(`The section has too many paragraphs or nodes: ${this.el.textContent}`)
-      }
-
-      nodes.push(sibling)
+      yield sibling
       current = sibling
     }
-
-    return nodes
   }
 
   isHigherThan(other: HTMLHeadingElement) {
@@ -59,5 +53,10 @@ export class MarkdownHeading {
 export function findHeadingById<E extends Element = HTMLElement>(id: string, parent: E) {
   const selector = HEADING_TAGS.map(h => `${h}[id="${CSS.escape(id)}"]`).join(',')
 
-  return parent.querySelector<HTMLHeadingElement>(selector)
+  const heading = parent.querySelector<HTMLHeadingElement>(selector)
+  if (!heading) {
+    return null
+  }
+
+  return new MarkdownHeading(heading)
 }
