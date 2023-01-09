@@ -2,11 +2,6 @@ import { OpenAPIV3_1 } from "openapi-types"
 import ts from "typescript"
 import { deepAssign } from "./utils"
 
-const MINIMUM_SCHEMA: OpenAPIV3_1.NonArraySchemaObject = {
-  type: 'object',
-  properties: {}
-}
-
 const SOURCE_FILE_NAME = 'index.ts'
 
 export class TypeScriptCodeBlock {
@@ -28,12 +23,16 @@ export class TypeScriptCodeBlock {
     const visit = (node: ts.Node) => {
       const symbol = this.typeChecker.getTypeAtLocation(node)
       if (isExportedInterface(symbol, this.exportedInterface)) {
-        this.schema = MINIMUM_SCHEMA
-
-        for (const [paths, property] of traverseProperties(symbol, this.typeChecker)) {
-          deepAssign(this.schema.properties!, paths, property)
+        const schema: OpenAPIV3_1.NonArraySchemaObject = {
+          type: 'object',
+          properties: {}
         }
 
+        for (const [paths, property] of traverseProperties(symbol, this.typeChecker)) {
+          deepAssign(schema.properties!, paths, property)
+        }
+
+        this.schema = schema
         return
       }
 
